@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expected or Unexpected?</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f0ff;
+  --expected: #2e7d32;
+  --expected-light: #e8f5e9;
+  --unexpected: #c62828;
+  --unexpected-light: #ffebee;
+  --card: #ffffff;
+  --dark: #1a1a2e;
+  --accent: #6c3fcf;
+  --accent2: #9c6fe4;
+  --shadow: 0 10px 36px rgba(0,0,0,0.10);
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 60px;
+  background-image:
+    radial-gradient(circle at 5% 10%, rgba(108,63,207,0.09) 0%, transparent 40%),
+    radial-gradient(circle at 95% 85%, rgba(255,180,0,0.10) 0%, transparent 40%);
+}
+
+header { text-align: center; margin-bottom: 26px; }
+header h1 {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(2rem, 6vw, 3rem);
+  color: var(--dark);
+  line-height: 1.15;
+}
+header h1 .e { color: var(--expected); }
+header h1 .u { color: var(--unexpected); }
+header p { color: #888; font-weight: 700; margin-top: 6px; font-size: 0.9rem; }
+
+/* Score */
+.score-row { display: flex; gap: 12px; margin-bottom: 20px; }
+.chip {
+  background: white; border-radius: 14px; padding: 10px 18px;
+  text-align: center; box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+  border: 2px solid #ede8ff; min-width: 76px;
+}
+.chip .cv { font-family: 'Fredoka One', cursive; font-size: 1.7rem; line-height: 1; }
+.chip .cl { font-size: 0.68rem; font-weight: 800; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px; }
+.chip.c-correct .cv { color: var(--expected); }
+.chip.c-wrong .cv { color: var(--unexpected); }
+.chip.c-prog .cv { color: var(--accent); }
+
+.prog-track { width: min(520px, 90vw); height: 10px; background: #ddd8f5; border-radius: 99px; overflow: hidden; margin-bottom: 24px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s ease; }
+
+/* CARD */
+.card-wrap { width: min(540px, 92vw); margin-bottom: 20px; }
+
+.scenario-card {
+  background: white;
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  padding: 28px 26px 24px;
+  border: 3px solid #ede8ff;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.scenario-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 24px 24px 0 0;
+}
+.scenario-card.correct-anim {
+  border-color: var(--expected);
+  box-shadow: 0 0 0 4px rgba(46,125,50,0.15), var(--shadow);
+  animation: pop 0.35s ease;
+}
+.scenario-card.wrong-anim {
+  border-color: var(--unexpected);
+  box-shadow: 0 0 0 4px rgba(198,40,40,0.15), var(--shadow);
+  animation: shake 0.4s ease;
+}
+@keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.03)} 100%{transform:scale(1)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+
+.card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.setting-badge {
+  background: #ede8ff; color: var(--accent);
+  font-size: 0.8rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  padding: 5px 14px; border-radius: 99px;
+}
+.qnum { margin-left: auto; font-size: 0.82rem; font-weight: 800; color: #bbb; }
+
+/* Big emoji visual */
+.scene-emoji {
+  font-size: 64px;
+  text-align: center;
+  display: block;
+  margin: 0 auto 14px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.10));
+}
+
+.scenario-text {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.65;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+/* Feedback */
+.feedback-box {
+  margin-top: 18px;
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.feedback-box.show { display: block; }
+.feedback-box.fb-correct { background: var(--expected-light); border: 2px solid #a5d6a7; }
+.feedback-box.fb-wrong { background: var(--unexpected-light); border: 2px solid #ef9a9a; }
+
+.fb-top {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.15rem; margin-bottom: 8px;
+}
+.fb-correct .fb-top { color: var(--expected); }
+.fb-wrong .fb-top { color: var(--unexpected); }
+.fb-explain { font-size: 0.92rem; font-weight: 700; color: #333; line-height: 1.6; margin-bottom: 10px; }
+
+.fb-discuss {
+  background: rgba(108,63,207,0.07);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #555;
+  line-height: 1.6;
+  border-left: 4px solid var(--accent);
+}
+.fb-discuss strong { color: var(--accent); }
+
+.fb-better {
+  margin-top: 10px;
+  background: rgba(46,125,50,0.07);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #2e5c31;
+  line-height: 1.6;
+  border-left: 4px solid var(--expected);
+  display: none;
+}
+.fb-better.show { display: block; }
+
+/* BUTTONS */
+.btn-row { display: flex; gap: 14px; width: min(540px, 92vw); margin-bottom: 16px; }
+
+.ans-btn {
+  flex: 1; border: none; border-radius: 22px;
+  padding: 20px 10px; cursor: pointer;
+  font-family: 'Fredoka One', cursive; font-size: 1.25rem;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: transform 0.13s, box-shadow 0.13s, opacity 0.15s;
+  letter-spacing: 0.5px;
+}
+.ans-btn:hover:not(:disabled) { transform: translateY(-4px); }
+.ans-btn:active:not(:disabled) { transform: translateY(0); }
+.ans-btn:disabled { opacity: 0.4; cursor: default; transform: none !important; }
+.ans-btn .bi { font-size: 2rem; }
+.ans-btn .bs { font-size: 0.72rem; font-family: 'Nunito', sans-serif; font-weight: 800; opacity: 0.85; text-transform: uppercase; letter-spacing: 1.5px; }
+
+.btn-expected {
+  background: linear-gradient(145deg, #2e7d32, #43a047);
+  color: white;
+  box-shadow: 0 7px 22px rgba(46,125,50,0.38);
+}
+.btn-unexpected {
+  background: linear-gradient(145deg, #c62828, #e53935);
+  color: white;
+  box-shadow: 0 7px 22px rgba(198,40,40,0.38);
+}
+
+.btn-next {
+  display: none; background: var(--accent); color: white;
+  border: none; border-radius: 14px; padding: 14px 38px;
+  font-family: 'Fredoka One', cursive; font-size: 1.15rem;
+  cursor: pointer; box-shadow: 0 5px 18px rgba(108,63,207,0.38);
+  transition: all 0.13s; letter-spacing: 0.5px; margin-bottom: 10px;
+}
+.btn-next.show { display: inline-block; }
+.btn-next:hover { transform: translateY(-2px); }
+
+.kb-hint { font-size: 0.72rem; color: #bbb; font-weight: 700; letter-spacing: 0.5px; }
+
+/* END */
+.end-screen { display: none; flex-direction: column; align-items: center; text-align: center; width: min(560px, 92vw); animation: fadeIn 0.5s ease; }
+.end-screen.show { display: flex; }
+.end-trophy { font-size: 5rem; margin-bottom: 10px; }
+.end-title { font-family: 'Fredoka One', cursive; font-size: 2.8rem; color: var(--dark); margin-bottom: 6px; }
+.end-score { font-size: 1rem; color: #888; font-weight: 700; margin-bottom: 28px; }
+
+.result-list { width: 100%; margin-bottom: 28px; text-align: left; }
+.result-list h3 { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: var(--accent); margin-bottom: 12px; }
+
+.r-item {
+  background: white; border-radius: 14px; padding: 12px 16px;
+  margin-bottom: 8px; display: flex; align-items: flex-start;
+  gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1.5px solid #eee;
+}
+.r-status { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+.r-body { flex: 1; }
+.r-emoji { font-size: 1.3rem; margin-right: 4px; }
+.r-scenario { font-size: 0.85rem; font-weight: 700; color: var(--dark); margin-bottom: 4px; line-height: 1.4; }
+.r-answer { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 2px 10px; border-radius: 99px; display: inline-block; }
+.ra-expected { background: var(--expected-light); color: var(--expected); }
+.ra-unexpected { background: var(--unexpected-light); color: var(--unexpected); }
+
+.btn-restart {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white; border: none; border-radius: 16px; padding: 16px 44px;
+  font-family: 'Fredoka One', cursive; font-size: 1.3rem; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(108,63,207,0.38); transition: all 0.15s;
+}
+.btn-restart:hover { transform: translateY(-3px); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="e">Expected</span> or <span class="u">Unexpected</span>?</h1>
+  <p>20 real-life scenarios · Read and decide!</p>
+</header>
+
+<div class="score-row">
+  <div class="chip c-correct"><div class="cv" id="sCorrect">0</div><div class="cl">Correct</div></div>
+  <div class="chip c-prog"><div class="cv" id="sProg">1/20</div><div class="cl">Progress</div></div>
+  <div class="chip c-wrong"><div class="cv" id="sWrong">0</div><div class="cl">Wrong</div></div>
+</div>
+
+<div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+<div id="gameArea">
+  <div class="card-wrap">
+    <div class="scenario-card" id="sCard">
+      <div class="card-top">
+        <div class="setting-badge" id="settingBadge"></div>
+        <div class="qnum" id="qNum"></div>
+      </div>
+      <span class="scene-emoji" id="sceneEmoji"></span>
+      <div class="scenario-text" id="scenarioText"></div>
+      <div class="feedback-box" id="feedbackBox">
+        <div class="fb-top"><span id="fbIcon"></span><span id="fbLabel"></span></div>
+        <div class="fb-explain" id="fbExplain"></div>
+        <div class="fb-better" id="fbBetter"></div>
+        <div class="fb-discuss" id="fbDiscuss"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="ans-btn btn-expected" id="btnE" onclick="answer('expected')">
+      <span class="bi">✅</span>
+      <span>Expected</span>
+      <span class="bs">Good fit</span>
+    </button>
+    <button class="ans-btn btn-unexpected" id="btnU" onclick="answer('unexpected')">
+      <span class="bi">😬</span>
+      <span>Unexpected</span>
+      <span class="bs">Doesn't fit</span>
+    </button>
+  </div>
+
+  <button class="btn-next" id="btnNext" onclick="nextQ()">Next →</button>
+  <p class="kb-hint">Keyboard: E = Expected &nbsp;|&nbsp; U = Unexpected &nbsp;|&nbsp; Space = Next</p>
+</div>
+
+<div class="end-screen" id="endScreen">
+  <div class="end-trophy" id="endTrophy"></div>
+  <div class="end-title" id="endTitle"></div>
+  <div class="end-score" id="endScore"></div>
+  <div class="result-list">
+    <h3>📋 Review All Scenarios</h3>
+    <div id="reviewItems"></div>
+  </div>
+  <button class="btn-restart" onclick="restart()">Play Again 🔄</button>
+</div>
+
+<script>
+const scenarios = [
+  // SCHOOL
+  {
+    setting: "🏫 School",
+    emoji: "🙋",
+    text: "In class, you know the answer. You raise your hand and wait to be called on.",
+    answer: "expected",
+    explain: "Raising your hand shows respect for the teacher and your classmates. It means everyone gets a fair turn to speak.",
+    better: null,
+    discuss: "💬 Talk about it: Why is it important to wait your turn instead of just yelling out the answer?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "🎧",
+    text: "Your teacher is giving instructions. You put your headphones in and listen to music.",
+    answer: "unexpected",
+    explain: "When a teacher is giving instructions, everyone needs to listen. Putting headphones in makes it hard to get important information and can seem disrespectful.",
+    better: "✅ Better choice: Put headphones away, face the teacher, and listen — you can use them during free time or breaks.",
+    discuss: "💬 Talk about it: What might you miss if you aren't listening during instructions? How do you think it makes the teacher feel?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "😤",
+    text: "A classmate bumps into you by accident in the hallway. You say 'Watch where you're going!' loudly.",
+    answer: "unexpected",
+    explain: "Accidents happen. Responding with anger can hurt someone's feelings and escalate the situation even when no one meant harm.",
+    better: "✅ Better choice: Take a breath. You could say nothing, or if needed: 'Hey, be careful next time' — calmly.",
+    discuss: "💬 Talk about it: How do you think the other person felt? What's the difference between an accident and someone being mean on purpose?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "🤝",
+    text: "You're assigned a group project with students you don't know. You introduce yourself and ask what everyone's ideas are.",
+    answer: "expected",
+    explain: "Introducing yourself and asking for others' ideas is a great way to start a group project. It shows respect and makes everyone feel included.",
+    better: null,
+    discuss: "💬 Talk about it: Have you ever worked with someone new and it turned out great? What made it work?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "😭",
+    text: "You get a bad grade on a test. You put your head down on the desk and refuse to do any more work for the rest of class.",
+    answer: "unexpected",
+    explain: "It's okay to feel disappointed — that's a normal feeling. But shutting down in class means you miss more learning, which can make things harder.",
+    better: "✅ Better choice: Take a few slow breaths. You could ask your teacher if you can talk after class about how to improve.",
+    discuss: "💬 Talk about it: What are some ways to handle frustrating feelings at school without shutting down?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "🍱",
+    text: "At lunch, you finish eating and throw away your trash and return your tray before leaving.",
+    answer: "expected",
+    explain: "Cleaning up your own space is a basic responsibility. It keeps the cafeteria nice for everyone and shows you care about shared spaces.",
+    better: null,
+    discuss: "💬 Talk about it: What would the cafeteria look like if no one cleaned up? Why do shared rules matter?"
+  },
+  // HOME
+  {
+    setting: "🏠 Home",
+    emoji: "📱",
+    text: "It's family dinner time. You bring your phone to the table and watch videos while everyone is eating.",
+    answer: "unexpected",
+    explain: "Family mealtime is usually a time to connect with each other. Being on your phone can signal that you're not interested in being present.",
+    better: "✅ Better choice: Put your phone away during dinner. You can use it after the meal.",
+    discuss: "💬 Talk about it: How might your family feel when you're on your phone at dinner? Why might they value that time together?"
+  },
+  {
+    setting: "🏠 Home",
+    emoji: "🛋️",
+    text: "You notice your parent looks really tired after work. You offer to help with a chore without being asked.",
+    answer: "expected",
+    explain: "Noticing when someone needs help and offering is a kind and mature thing to do. It shows empathy and strengthens relationships.",
+    better: null,
+    discuss: "💬 Talk about it: How do you feel when someone notices you're struggling and offers to help? How can you tell when someone might need support?"
+  },
+  {
+    setting: "🏠 Home",
+    emoji: "🚪",
+    text: "You're upset about something. You go to your room, close the door, and take some time to calm down before talking about it.",
+    answer: "expected",
+    explain: "Removing yourself from a situation to calm down before talking is a really healthy strategy. It helps prevent saying things you might regret.",
+    better: null,
+    discuss: "💬 Talk about it: What are some things you do to calm down when you're upset? Why is it helpful to cool down before a difficult conversation?"
+  },
+  {
+    setting: "🏠 Home",
+    emoji: "😡",
+    text: "Your sibling changes the TV channel without asking. You grab the remote back and yell at them.",
+    answer: "unexpected",
+    explain: "Grabbing things and yelling usually makes conflicts bigger, not smaller. Even when you're frustrated, it's important to try to communicate calmly.",
+    better: "✅ Better choice: Say calmly, 'Hey, I was watching that — can we figure this out?' or get a parent to help if needed.",
+    discuss: "💬 Talk about it: What tends to happen when two people both react with anger? What helps arguments de-escalate?"
+  },
+  {
+    setting: "🏠 Home",
+    emoji: "🔒",
+    text: "A friend asks you to share your home address and your parents' phone numbers. You say you need to check with your parents first.",
+    answer: "expected",
+    explain: "Checking with a trusted adult before sharing personal information is a smart safety habit — even with people you know.",
+    better: null,
+    discuss: "💬 Talk about it: What kinds of personal information should you always check with a parent or guardian before sharing?"
+  },
+  // COMMUNITY
+  {
+    setting: "🛒 Community",
+    emoji: "🎬",
+    text: "You're at a movie theater. Your phone buzzes. You check it and text back with the screen brightness all the way up.",
+    answer: "unexpected",
+    explain: "Bright screens and texting in a dark theater is distracting for everyone around you. It can disrupt their experience of the movie.",
+    better: "✅ Better choice: Silence your phone or turn it face-down. If it's urgent, step outside to respond.",
+    discuss: "💬 Talk about it: Have you ever been distracted by someone's phone at a movie or event? How did it feel?"
+  },
+  {
+    setting: "🛒 Community",
+    emoji: "🚌",
+    text: "On a crowded bus, you notice an elderly person standing with no seat. You offer them yours.",
+    answer: "expected",
+    explain: "Offering your seat to someone who needs it more — like an elderly or disabled person — is a considerate and socially valued behavior.",
+    better: null,
+    discuss: "💬 Talk about it: Who else might especially benefit from being offered a seat? How do you decide when to offer yours?"
+  },
+  {
+    setting: "🛒 Community",
+    emoji: "🏪",
+    text: "You're at a store and you accidentally knock something off a shelf. You look around, then walk away without telling anyone.",
+    answer: "unexpected",
+    explain: "Walking away from something you knocked over — even by accident — leaves a problem for someone else to deal with. Taking responsibility is the expected choice.",
+    better: "✅ Better choice: Pick it up if you can, or let a store employee know so it can be taken care of safely.",
+    discuss: "💬 Talk about it: Why can it be tempting to walk away when we make a mistake? What does it mean to 'own' a mistake?"
+  },
+  {
+    setting: "🛒 Community",
+    emoji: "🩺",
+    text: "You're in a doctor's waiting room. You keep your voice low and wait patiently for your name to be called.",
+    answer: "expected",
+    explain: "Waiting rooms are shared spaces where people may feel anxious or unwell. Being calm and quiet shows consideration for others.",
+    better: null,
+    discuss: "💬 Talk about it: What are some other public places where it's important to be especially calm and quiet? Why?"
+  },
+  {
+    setting: "🛒 Community",
+    emoji: "🍔",
+    text: "At a fast food restaurant, your order is wrong. You raise your voice at the cashier and say 'This always happens here!'",
+    answer: "unexpected",
+    explain: "Getting a wrong order is frustrating, but yelling at the worker — who may not be the one who made the mistake — isn't fair to them.",
+    better: "✅ Better choice: Calmly say, 'Excuse me, I think my order might be wrong — could you help me fix it?' Most workers are happy to help when approached kindly.",
+    discuss: "💬 Talk about it: Has something like this happened to you? What was the result when you stayed calm vs. when you got frustrated?"
+  },
+  // MIXED / TRICKY
+  {
+    setting: "🏫 School",
+    emoji: "🤫",
+    text: "You see a classmate being bullied in the hallway. You don't want to make it worse, so you walk past and say nothing.",
+    answer: "unexpected",
+    explain: "Staying silent when someone is being bullied can feel safe, but it often allows the bullying to continue. Saying something — or getting an adult — is the expected brave response.",
+    better: "✅ Better choice: You don't have to confront the bully directly. You could get a teacher, check on the person afterward, or say 'Hey, leave them alone' if it's safe.",
+    discuss: "💬 Talk about it: Why is it hard to speak up in these situations? What makes someone a bystander vs. an upstander?"
+  },
+  {
+    setting: "🏠 Home",
+    emoji: "💬",
+    text: "Your parent tells you something that you think is unfair. You calmly say 'I disagree — can I explain why?' and listen to their response.",
+    answer: "expected",
+    explain: "Disagreeing respectfully — without yelling or shutting down — is a mature and important life skill. It shows you can advocate for yourself while still respecting others.",
+    better: null,
+    discuss: "💬 Talk about it: What's the difference between disrespecting someone and respectfully disagreeing? Can you disagree AND still follow the rule?"
+  },
+  {
+    setting: "🛒 Community",
+    emoji: "🙅",
+    text: "A stranger online asks you to meet up in person. You say no and tell a trusted adult right away.",
+    answer: "expected",
+    explain: "Saying no to meeting strangers online and telling a trusted adult is exactly the right and safe thing to do — every time, no exceptions.",
+    better: null,
+    discuss: "💬 Talk about it: Why can online strangers be risky even if they seem friendly? Who are your trusted adults you could tell?"
+  },
+  {
+    setting: "🏫 School",
+    emoji: "💡",
+    text: "You finish a test early. Instead of sitting quietly or reviewing your answers, you start talking to the person next to you.",
+    answer: "unexpected",
+    explain: "Talking during a test — even if you're done — can distract classmates who are still working and may be seen as a disruption.",
+    better: "✅ Better choice: Review your answers, doodle quietly on scratch paper, or let the teacher know you're done and ask if there's something else you can do.",
+    discuss: "💬 Talk about it: How would you feel if someone distracted you right when you were trying to remember an answer on a test?"
+  },
+];
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+shuffle(scenarios);
+
+let cur=0, numCorrect=0, numWrong=0, didAnswer=false, results=[];
+
+function render() {
+  const s = scenarios[cur];
+  document.getElementById('settingBadge').textContent = s.setting;
+  document.getElementById('qNum').textContent = `Q${cur+1} / 20`;
+  document.getElementById('sceneEmoji').textContent = s.emoji;
+  document.getElementById('scenarioText').textContent = s.text;
+
+  document.getElementById('feedbackBox').className = 'feedback-box';
+  document.getElementById('sCard').className = 'scenario-card';
+  document.getElementById('fbBetter').className = 'fb-better';
+  document.getElementById('btnE').disabled = false;
+  document.getElementById('btnU').disabled = false;
+  document.getElementById('btnNext').classList.remove('show');
+  didAnswer = false;
+
+  document.getElementById('progFill').style.width = (cur/20*100)+'%';
+  document.getElementById('sProg').textContent = `${cur+1}/20`;
+}
+
+function answer(choice) {
+  if (didAnswer) return;
+  didAnswer = true;
+
+  const s = scenarios[cur];
+  const correct = choice === s.answer;
+  if (correct) numCorrect++; else numWrong++;
+  results.push({ s, choice, correct });
+
+  document.getElementById('sCorrect').textContent = numCorrect;
+  document.getElementById('sWrong').textContent = numWrong;
+
+  document.getElementById('sCard').classList.add(correct ? 'correct-anim' : 'wrong-anim');
+
+  const fb = document.getElementById('feedbackBox');
+  fb.className = 'feedback-box show ' + (correct ? 'fb-correct' : 'fb-wrong');
+
+  document.getElementById('fbIcon').textContent = correct ? '✅' : '❌';
+  document.getElementById('fbLabel').textContent = correct
+    ? (s.answer === 'expected' ? "Yes! That's expected behavior." : "Right! That's unexpected behavior.")
+    : (s.answer === 'expected' ? "This is actually expected behavior." : "This is actually unexpected behavior.");
+
+  document.getElementById('fbExplain').textContent = s.explain;
+
+  const betterEl = document.getElementById('fbBetter');
+  if (s.better) {
+    betterEl.textContent = s.better;
+    betterEl.className = 'fb-better show';
+  }
+
+  document.getElementById('fbDiscuss').innerHTML = s.discuss;
+  document.getElementById('btnE').disabled = true;
+  document.getElementById('btnU').disabled = true;
+  document.getElementById('btnNext').classList.add('show');
+}
+
+function nextQ() {
+  cur++;
+  if (cur >= 20) showEnd();
+  else render();
+}
+
+function showEnd() {
+  document.getElementById('gameArea').style.display = 'none';
+  document.getElementById('progFill').style.width = '100%';
+
+  const pct = Math.round(numCorrect/20*100);
+  let trophy, title;
+  if (pct===100) { trophy='🏆'; title='Perfect Score!'; }
+  else if (pct>=80) { trophy='🌟'; title='Great job!'; }
+  else if (pct>=60) { trophy='👍'; title='Good effort!'; }
+  else { trophy='💪'; title='Keep practicing!'; }
+
+  document.getElementById('endTrophy').textContent = trophy;
+  document.getElementById('endTitle').textContent = title;
+  document.getElementById('endScore').textContent = `You got ${numCorrect} out of 20 correct (${pct}%)`;
+
+  const rev = document.getElementById('reviewItems');
+  rev.innerHTML = '';
+  results.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'r-item';
+    const ac = r.s.answer==='expected' ? 'ra-expected' : 'ra-unexpected';
+    const al = r.s.answer==='expected' ? '✅ Expected' : '😬 Unexpected';
+    d.innerHTML = `
+      <div class="r-status">${r.correct?'✅':'❌'}</div>
+      <div class="r-body">
+        <div class="r-scenario"><span class="r-emoji">${r.s.emoji}</span>${r.s.text}</div>
+        <span class="r-answer ${ac}">${al}</span>
+      </div>`;
+    rev.appendChild(d);
+  });
+
+  document.getElementById('endScreen').classList.add('show');
+}
+
+function restart() {
+  cur=0; numCorrect=0; numWrong=0; didAnswer=false; results=[];
+  shuffle(scenarios);
+  document.getElementById('sCorrect').textContent='0';
+  document.getElementById('sWrong').textContent='0';
+  document.getElementById('gameArea').style.display='';
+  document.getElementById('endScreen').classList.remove('show');
+  render();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key.toLowerCase()==='e' && !didAnswer) answer('expected');
+  if (e.key.toLowerCase()==='u' && !didAnswer) answer('unexpected');
+  if (e.key===' ' && didAnswer) { e.preventDefault(); nextQ(); }
+});
+
+render();
+</script>
+</body>
+</html>
